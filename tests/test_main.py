@@ -10,7 +10,7 @@ client = TestClient(app)
 
 
 def test_prompt_handler():
-    res = client.post("/prompt", json={"prompt": "Hello Zona!"})
+    res = client.post("/prompt", json={"prompt": "Hello Zona!", "provider": "openai"})
     assert res.status_code == 200
     assert "response" in res.json()
 

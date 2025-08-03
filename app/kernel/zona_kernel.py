@@ -1,7 +1,5 @@
 import os
-from typing import Dict, List
-
-import openai
+from typing import Dict, List, Protocol
 
 from app.storage.memory_store import (
     load_memory,
@@ -9,6 +7,15 @@ from app.storage.memory_store import (
     clear_memory as clear_memory_store,
 )
 from zona.plugin_manager import handle_plugin_command
+from app.providers.openai_provider import OpenAIProvider
+
+
+class ChatProvider(Protocol):
+    """Protocol for chat providers."""
+
+    def chat(self, messages: List[dict[str, str]]) -> str:
+        """Return the assistant's reply for the given message history."""
+        ...
 
 class ZonaKernel:
     """OpenAI API wrapper with session memory."""
@@ -21,8 +28,6 @@ class ZonaKernel:
         max_total_length: int | None = None,
     ) -> None:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if self.api_key:
-            openai.api_key = self.api_key
         self.memory: Dict[str, List[dict[str, str]]] = load_memory()
         self.max_messages = max_messages
         self.max_total_length = max_total_length
@@ -31,14 +36,15 @@ class ZonaKernel:
         """Return a reversed version of the input text."""
         return text[::-1]
 
-    def openai_chat(
+    def chat(
         self,
+        provider: ChatProvider,
         prompt: str,
         session_id: str = "default",
         *,
         obfuscate_output: bool = False,
     ) -> str:
-        """Send a prompt to the OpenAI ChatCompletion API with session memory."""
+        """Send a prompt to a provider with session memory."""
         stripped = prompt.strip()
         if stripped == "!clear":
             self.clear_memory(session_id)
@@ -53,20 +59,29 @@ class ZonaKernel:
         history.append({"role": "user", "content": prompt})
         self._trim_history(history)
 
-        if self.api_key:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=history,
-            )
-            content = response.choices[0].message["content"].strip()
-        else:
-            content = prompt
+        content = provider.chat(history)
 
         history.append({"role": "assistant", "content": content})
         self._trim_history(history)
         save_memory(self.memory)
 
         return self.obfuscate(content) if obfuscate_output else content
+
+    def openai_chat(
+        self,
+        prompt: str,
+        session_id: str = "default",
+        *,
+        obfuscate_output: bool = False,
+    ) -> str:
+        """Backward-compatible OpenAI chat helper."""
+        provider = OpenAIProvider(self.api_key)
+        return self.chat(
+            provider,
+            prompt,
+            session_id=session_id,
+            obfuscate_output=obfuscate_output,
+        )
 
     # ------------------------------------------------------------------
     def _trim_history(self, history: List[dict[str, str]]) -> None:

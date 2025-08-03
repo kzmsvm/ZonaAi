@@ -10,9 +10,9 @@ client = TestClient(app)
 
 
 def test_prompt_handler_returns_response():
-    kernel.openai_chat = (
-        lambda prompt, session_id="default", obfuscate_output=False: "mocked"
+    kernel.chat = (
+        lambda provider, prompt, session_id="default", obfuscate_output=False: "mocked"
     )
-    response = client.post("/prompt", json={"prompt": "hi"})
+    response = client.post("/prompt", json={"prompt": "hi", "provider": "openai"})
     assert response.status_code == 200
     assert response.json() == {"response": "mocked"}
