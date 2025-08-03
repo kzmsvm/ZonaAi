@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -9,6 +11,7 @@ from app.utils.logger import log_interaction
 from app.utils.license import LicenseManager
 
 
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 app = FastAPI(title="Zona API")
 
 # Varsayılan provider ile kernel başlat
@@ -61,4 +64,4 @@ async def prompt_handler(request: Request, data: Prompt) -> dict[str, str]:
 
 
 # Statik web UI mount'u
-app.mount("/static", StaticFiles(directory="app/static", html=True), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR, html=True), name="static")
