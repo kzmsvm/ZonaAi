@@ -8,6 +8,7 @@ from app.storage.memory_store import (
     save_memory,
     clear_memory as clear_memory_store,
 )
+from app.utils.license import LicenseManager
 from zona.plugin_manager import handle_plugin_command
 
 class ZonaKernel:
@@ -26,6 +27,14 @@ class ZonaKernel:
         self.memory: Dict[str, List[dict[str, str]]] = load_memory()
         self.max_messages = max_messages
         self.max_total_length = max_total_length
+
+        # Registered chat providers. Mapped to method names so runtime patches
+        # (used in tests) are respected.
+        self.providers: Dict[str, str] = {
+            "openai": "openai_chat"
+        }
+        if LicenseManager.validate_license():
+            self.providers["gemini"] = "gemini_chat"
 
     def obfuscate(self, text: str) -> str:
         """Return a reversed version of the input text."""
@@ -66,6 +75,23 @@ class ZonaKernel:
         self._trim_history(history)
         save_memory(self.memory)
 
+        return self.obfuscate(content) if obfuscate_output else content
+
+    def gemini_chat(
+        self,
+        prompt: str,
+        session_id: str = "default",
+        *,
+        obfuscate_output: bool = False,
+    ) -> str:
+        """Placeholder Gemini provider.
+
+        In a real implementation this would call the Google Gemini API. For the
+        purposes of testing and development, it simply echoes the prompt with a
+        provider-specific prefix.
+        """
+
+        content = f"Gemini: {prompt}"
         return self.obfuscate(content) if obfuscate_output else content
 
     # ------------------------------------------------------------------
