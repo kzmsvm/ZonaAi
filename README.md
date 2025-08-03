@@ -8,7 +8,8 @@ ZONA AI is a privacy-first, modular, hybrid (offline/online) AI runtime with mem
 ZonaAi/
 ├── app/
 │   ├── main.py                 # FastAPI application
-│   └── kernel/zona_kernel.py   # Obfuscation, OpenAI API wrapper
+│   ├── kernel/zona_kernel.py   # Obfuscation, OpenAI API wrapper
+│   └── static/                 # Minimal browser chat interface
 ├── Dockerfile
 ├── requirements.txt
 ├── cloudbuild.yaml             # Alternative GCP deploy script
@@ -23,6 +24,8 @@ ZonaAi/
 export OPENAI_API_KEY=sk-...
 uvicorn app.main:app --reload --port 8000
 ```
+
+Then visit `http://localhost:8000` in your browser to use the built‑in chat UI.
 
 ## Docker
 
