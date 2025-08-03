@@ -20,8 +20,23 @@ ZonaAi/
 
 ## Local Development
 
+Copy `.env.template` to `.env` and populate it with your keys and preferences:
+
 ```bash
-export OPENAI_API_KEY=sk-...
+cp .env.template .env
+```
+
+Key variables include:
+
+- `OPENAI_API_KEY`, `GEMINI_API_KEY` – provider API keys
+- `LICENSE_KEY` – enables premium providers such as Gemini
+- `USE_FIRESTORE` / `FIRESTORE_PROJECT_ID` – store chat memory in Firestore
+- `DATABASE_URL` – use SQLite/Postgres for persistent memory storage
+- `DEFAULT_PROVIDER` – default provider for `/prompt` requests
+
+Run the app locally with:
+
+```bash
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -41,6 +56,8 @@ Example request body:
   "provider": "openai"
 }
 ```
+
+Additional providers can be registered at runtime using `ZonaKernel.add_provider`.
 
 ## Docker
 

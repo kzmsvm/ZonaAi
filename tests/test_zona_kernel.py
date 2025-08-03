@@ -40,3 +40,14 @@ def test_plugin_confirmation_cancel():
     result = kernel.openai_chat("no", session_id="s1")
     assert result == "Cancelled."
     assert "s1" not in kernel.pending_actions
+
+
+def test_add_provider_runtime():
+    kernel = ZonaKernel()
+
+    def dummy(prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
+        return f"dummy:{prompt}"
+
+    kernel.add_provider("dummy", dummy)
+    response = kernel.dispatch_provider("dummy", "hi")
+    assert response == "dummy:hi"

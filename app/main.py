@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
@@ -14,8 +15,14 @@ from app.utils.license import LicenseManager
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 app = FastAPI(title="Zona API")
 
+# Varsayılan provider ayarı
+DEFAULT_PROVIDER = os.getenv("DEFAULT_PROVIDER", "openai").lower()
+_default_cls = {"openai": OpenAIProvider, "gemini": GeminiProvider}.get(
+    DEFAULT_PROVIDER, OpenAIProvider
+)
+
 # Varsayılan provider ile kernel başlat
-kernel = ZonaKernel(provider=OpenAIProvider())
+kernel = ZonaKernel(provider=_default_cls())
 
 
 # GET / — Obfuscate edilmiş selam
@@ -29,7 +36,7 @@ class Prompt(BaseModel):
     prompt: str
     session_id: str = "default"
     obfuscate_output: bool = False
-    provider: str = "openai"
+    provider: str = DEFAULT_PROVIDER
 
 
 # Desteklenen provider'lar
