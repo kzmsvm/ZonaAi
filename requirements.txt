@@ -5,3 +5,4 @@ numexpr
 
 google-generativeai
 portalocker
+google-cloud-firestore

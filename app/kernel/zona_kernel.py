@@ -2,7 +2,7 @@ from typing import Callable, Dict, List
 
 from app.kernel.providers import BaseProvider
 from app.kernel.providers.openai_provider import OpenAIProvider
-from app.storage.memory_store import load_memory, save_memory, clear_memory as clear_memory_store
+from app.storage.memory_store import MemoryStore
 from app.utils.license import LicenseManager
 from zona.plugin_manager import handle_plugin_command
 
@@ -18,7 +18,8 @@ class ZonaKernel:
         max_total_length: int | None = None,
     ) -> None:
         self.provider = provider or OpenAIProvider()
-        self.memory: Dict[str, List[dict[str, str]]] = load_memory()
+        self.store = MemoryStore()
+        self.memory: Dict[str, List[dict[str, str]]] = self.store.load_memory()
         self.max_messages = max_messages
         self.max_total_length = max_total_length
         self.pending_actions: Dict[str, str] = {}
@@ -72,7 +73,7 @@ class ZonaKernel:
 
         history.append({"role": "assistant", "content": content})
         self._trim_history(history)
-        save_memory(self.memory)
+        self.store.save_memory(self.memory)
 
         return self.obfuscate(content) if obfuscate_output else content
 
@@ -110,7 +111,7 @@ class ZonaKernel:
     def clear_memory(self, session_id: str | None = None) -> None:
         if session_id is None:
             self.memory.clear()
-            clear_memory_store()
+            self.store.clear_memory()
         else:
             self.memory.pop(session_id, None)
-            save_memory(self.memory)
+            self.store.save_memory(self.memory)

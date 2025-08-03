@@ -1,66 +1,87 @@
-"""Persistence layer for session memory.
+"""Persistence layer for session memory backed by Firestore.
 
-This module handles reading and writing the ``zona_memory.json`` file. To
-avoid race conditions when multiple processes or threads access the file, a
-simple file locking mechanism is used.
+This module stores chat session history in Google Cloud Firestore. When
+Firestore is not configured (e.g. during local development or in test
+environments), it falls back to an in-memory cache so the rest of the
+application can operate without external dependencies.
 """
 
-import json
+from __future__ import annotations
+
 import os
-from contextlib import contextmanager
-from typing import Dict, List
+from typing import Dict, List, Optional
 
-try:
-    import portalocker
-except ModuleNotFoundError:  # pragma: no cover - fallback for environments without portalocker
-    import fcntl  # type: ignore
-
-    class _PortalockerShim:
-        LOCK_EX = fcntl.LOCK_EX
-        LOCK_SH = fcntl.LOCK_SH
-
-        @staticmethod
-        def lock(file, flags):
-            fcntl.flock(file, flags)
-
-        @staticmethod
-        def unlock(file):
-            fcntl.flock(file, fcntl.LOCK_UN)
-
-    portalocker = _PortalockerShim()
-
-STORE_PATH = "zona_memory.json"
+try:  # pragma: no cover - optional dependency
+    from google.cloud import firestore  # type: ignore
+except Exception:  # pragma: no cover - library missing or misconfigured
+    firestore = None  # type: ignore
 
 
-@contextmanager
-def _locked_file(path: str, mode: str):
-    """Open ``path`` with ``mode`` and acquire a cross-platform file lock."""
-    # Create the directory of the path if it doesn't exist
-    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
-    with open(path, mode, encoding="utf-8") as f:
-        lock_type = portalocker.LOCK_EX if "w" in mode or "a" in mode else portalocker.LOCK_SH
-        portalocker.lock(f, lock_type)
-        try:
-            yield f
-        finally:
-            portalocker.unlock(f)
+class MemoryStore:
+    """Store chat session memory in Firestore."""
+
+    def __init__(
+        self,
+        *,
+        project_id: Optional[str] = None,
+        collection: str = "zona",
+        document: str = "memory",
+    ) -> None:
+        self.collection = collection
+        self.document = document
+        self._memory: Dict[str, List[dict]] = {}
+
+        self._client = None
+        project = project_id or os.getenv("FIRESTORE_PROJECT_ID")
+        if firestore is not None and project:
+            try:  # pragma: no cover - requires valid credentials
+                self._client = firestore.Client(project=project)
+            except Exception:
+                self._client = None
+
+    # ------------------------------------------------------------------
+    # Helper methods
+    def _doc_ref(self):  # pragma: no cover - simple helper
+        if self._client is None:
+            return None
+        return self._client.collection(self.collection).document(self.document)
+
+    # ------------------------------------------------------------------
+    # Public API
+    def load_memory(self) -> Dict[str, List[dict]]:
+        """Load memory from Firestore or return cached value."""
+        doc_ref = self._doc_ref()
+        if doc_ref is not None:
+            try:
+                snapshot = doc_ref.get()
+                if snapshot.exists:
+                    data = snapshot.to_dict() or {}
+                    self._memory = data
+                    return data
+            except Exception:
+                pass
+        return dict(self._memory)
+
+    def save_memory(self, memory: Dict[str, List[dict]]) -> None:
+        """Persist memory to Firestore and update the cache."""
+        self._memory = memory
+        doc_ref = self._doc_ref()
+        if doc_ref is not None:
+            try:
+                doc_ref.set(memory)
+            except Exception:
+                pass
+
+    def clear_memory(self) -> None:
+        """Remove all persisted memory."""
+        self._memory = {}
+        doc_ref = self._doc_ref()
+        if doc_ref is not None:
+            try:
+                doc_ref.delete()
+            except Exception:
+                pass
 
 
-def load_memory() -> Dict[str, List[dict]]:
-    """Load memory from disk if it exists."""
-    if not os.path.exists(STORE_PATH):
-        return {}
-    with _locked_file(STORE_PATH, "r") as f:
-        return json.load(f)
+__all__ = ["MemoryStore"]
 
-
-def save_memory(memory: Dict[str, List[dict]]) -> None:
-    """Persist memory to disk."""
-    with _locked_file(STORE_PATH, "w") as f:
-        json.dump(memory, f, indent=2)
-
-
-def clear_memory() -> None:
-    """Remove all persisted memory."""
-    # Overwrite the file with an empty JSON object while holding the lock
-    save_memory({})
