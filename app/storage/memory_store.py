@@ -7,25 +7,43 @@ simple file locking mechanism is used.
 
 import json
 import os
-import fcntl
 from contextlib import contextmanager
 from typing import Dict, List
+
+try:
+    import portalocker
+except ModuleNotFoundError:  # pragma: no cover - fallback for environments without portalocker
+    import fcntl  # type: ignore
+
+    class _PortalockerShim:
+        LOCK_EX = fcntl.LOCK_EX
+        LOCK_SH = fcntl.LOCK_SH
+
+        @staticmethod
+        def lock(file, flags):
+            fcntl.flock(file, flags)
+
+        @staticmethod
+        def unlock(file):
+            fcntl.flock(file, fcntl.LOCK_UN)
+
+    portalocker = _PortalockerShim()
 
 STORE_PATH = "zona_memory.json"
 
 
 @contextmanager
 def _locked_file(path: str, mode: str):
-    """Open ``path`` with ``mode`` and acquire an advisory lock."""
+    """Open ``path`` with ``mode`` and acquire a cross-platform file lock."""
     # Create the directory of the path if it doesn't exist
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
     with open(path, mode, encoding="utf-8") as f:
-        lock_type = fcntl.LOCK_EX if "w" in mode or "a" in mode else fcntl.LOCK_SH
-        fcntl.flock(f, lock_type)
+        lock_type = portalocker.LOCK_EX if "w" in mode or "a" in mode else portalocker.LOCK_SH
+        portalocker.lock(f, lock_type)
         try:
             yield f
         finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+            portalocker.unlock(f)
 
 
 def load_memory() -> Dict[str, List[dict]]:
