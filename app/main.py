@@ -12,11 +12,14 @@ kernel = ZonaKernel()
 class Prompt(BaseModel):
     prompt: str
     session_id: str = "default"
+    mode: str | None = None
 
 
 @app.post("/prompt")
 async def prompt_handler(data: Prompt) -> dict[str, str]:
-    result = kernel.openai_chat(data.prompt, session_id=data.session_id)
+    result = kernel.openai_chat(
+        data.prompt, session_id=data.session_id, obfuscate=data.mode == "obfuscate"
+    )
     return {"response": result}
 
 

@@ -16,7 +16,13 @@ class ZonaKernel:
         """Return a reversed version of the input text."""
         return text[::-1]
 
-    def openai_chat(self, prompt: str, session_id: str = "default") -> str:
+    def openai_chat(
+        self,
+        prompt: str,
+        session_id: str = "default",
+        *,
+        obfuscate: bool = False,
+    ) -> str:
         """Send a prompt to the OpenAI ChatCompletion API with session memory."""
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY is not set")
@@ -32,4 +38,4 @@ class ZonaKernel:
         content = response.choices[0].message["content"].strip()
         history.append({"role": "assistant", "content": content})
 
-        return self.obfuscate(content)  # ya da `return content` (prod için)
+        return self.obfuscate(content) if obfuscate else content
