@@ -1,13 +1,11 @@
 from typing import Dict, List
 
-from app.kernel.providers import BaseProvider, OpenAIProvider
-
-from app.storage.memory_store import (
-    load_memory,
-    save_memory,
-    clear_memory as clear_memory_store,
-)
+from app.kernel.providers import BaseProvider
+from app.providers.openai_provider import OpenAIProvider
+from app.storage.memory_store import load_memory, save_memory, clear_memory as clear_memory_store
+from app.utils.license import LicenseManager
 from zona.plugin_manager import handle_plugin_command
+
 
 class ZonaKernel:
     """Chat kernel with pluggable providers and session memory."""
@@ -23,20 +21,37 @@ class ZonaKernel:
         self.memory: Dict[str, List[dict[str, str]]] = load_memory()
         self.max_messages = max_messages
         self.max_total_length = max_total_length
+        self.pending_actions: Dict[str, str] = {}
+
+        self.providers: Dict[str, str] = {
+            "openai": "openai_chat"
+        }
+        if LicenseManager.validate_license():
+            self.providers["gemini"] = "gemini_chat"
 
     def obfuscate(self, text: str) -> str:
-        """Return a reversed version of the input text."""
         return text[::-1]
 
     def chat(
         self,
+        provider: BaseProvider,
         prompt: str,
         session_id: str = "default",
         *,
         obfuscate_output: bool = False,
     ) -> str:
-        """Send a prompt to the configured provider with session memory."""
         stripped = prompt.strip()
+
+        if session_id in self.pending_actions:
+            confirmation = stripped.lower()
+            if confirmation in {"yes", "y"}:
+                command = self.pending_actions.pop(session_id)
+                return handle_plugin_command(command)
+            if confirmation in {"no", "n"}:
+                self.pending_actions.pop(session_id)
+                return "Cancelled."
+            return "Please reply 'yes' or 'no'."
+
         if stripped == "!clear":
             self.clear_memory(session_id)
             return "Memory cleared."
@@ -44,13 +59,16 @@ class ZonaKernel:
             self.clear_memory()
             return "All memory cleared."
         if stripped.startswith("!"):
-            return handle_plugin_command(stripped)
+            self.pending_actions[session_id] = stripped
+            name, *args = stripped[1:].split(maxsplit=1)
+            args_str = args[0] if args else ""
+            return f"Run plugin `{name}` with args `{args_str}`? (yes/no)"
 
         history = self.memory.setdefault(session_id, [])
         history.append({"role": "user", "content": prompt})
         self._trim_history(history)
 
-        content = self.provider.generate_response(history)
+        content = provider.generate_response(history)
 
         history.append({"role": "assistant", "content": content})
         self._trim_history(history)
@@ -58,9 +76,15 @@ class ZonaKernel:
 
         return self.obfuscate(content) if obfuscate_output else content
 
-    # ------------------------------------------------------------------
+    def openai_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
+        provider = OpenAIProvider()
+        return self.chat(provider, prompt, session_id=session_id, obfuscate_output=obfuscate_output)
+
+    def gemini_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
+        content = f"Gemini: {prompt}"
+        return self.obfuscate(content) if obfuscate_output else content
+
     def _trim_history(self, history: List[dict[str, str]]) -> None:
-        """Enforce limits on a session's history."""
         if self.max_messages is not None and len(history) > self.max_messages:
             del history[:-self.max_messages]
         if self.max_total_length is not None:
@@ -70,7 +94,6 @@ class ZonaKernel:
                 total -= len(removed["content"])
 
     def clear_memory(self, session_id: str | None = None) -> None:
-        """Clear memory for a session or all sessions."""
         if session_id is None:
             self.memory.clear()
             clear_memory_store()
