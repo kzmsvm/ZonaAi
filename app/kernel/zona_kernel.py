@@ -21,21 +21,21 @@ class ZonaKernel:
         prompt: str,
         session_id: str = "default",
         *,
-        obfuscate: bool = False,
+        obfuscate_output: bool = False,
     ) -> str:
         """Send a prompt to the OpenAI ChatCompletion API with session memory."""
-        if not self.api_key:
-            raise ValueError("OPENAI_API_KEY is not set")
-
         history = self.memory.setdefault(session_id, [])
         history.append({"role": "user", "content": prompt})
 
-        response = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=history,
-        )
+        if self.api_key:
+            response = openai.ChatCompletion.create(
+                model="gpt-3.5-turbo",
+                messages=history,
+            )
+            content = response.choices[0].message["content"].strip()
+        else:
+            content = prompt
 
-        content = response.choices[0].message["content"].strip()
         history.append({"role": "assistant", "content": content})
 
-        return self.obfuscate(content) if obfuscate else content
+        return self.obfuscate(content) if obfuscate_output else content
