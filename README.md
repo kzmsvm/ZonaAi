@@ -29,9 +29,18 @@ Then visit `http://localhost:8000` in your browser to use the built‑in chat UI
 
 ## Providers
 
-The `/prompt` endpoint accepts a `provider` field to select which LLM backend to use. Available providers are:
+The `/prompt` endpoint requires a `provider` field to select which LLM backend to use. Available providers are:
 
-- `openai` – requires the `OPENAI_API_KEY` environment variable and uses OpenAI's ChatCompletion API.
+- `openai` – set `OPENAI_API_KEY` to your API key; uses OpenAI's ChatCompletion API.
+
+Example request body:
+
+```json
+{
+  "prompt": "Hello",
+  "provider": "openai"
+}
+```
 
 ## Docker
 

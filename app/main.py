@@ -18,7 +18,7 @@ async def root() -> dict[str, str]:
 
 class Prompt(BaseModel):
     prompt: str
-    provider: str = "openai"
+    provider: str
     session_id: str = "default"
     obfuscate_output: bool = False
 
@@ -28,10 +28,10 @@ PROVIDERS = {"openai": OpenAIProvider}
 
 @app.post("/prompt")
 async def prompt_handler(data: Prompt) -> dict[str, str]:
-    provider_cls = PROVIDERS.get(data.provider)
+    provider_cls = PROVIDERS.get(data.provider.lower())
     if provider_cls is None:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {data.provider}")
-    provider = provider_cls()
+    provider = provider_cls(kernel.api_key)
     result = kernel.chat(
         provider,
         data.prompt,
