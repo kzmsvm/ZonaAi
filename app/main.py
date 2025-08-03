@@ -3,6 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from app.kernel.zona_kernel import ZonaKernel
+from app.utils.logger import log_interaction
 
 
 app = FastAPI(title="Zona API")
@@ -27,6 +28,7 @@ async def prompt_handler(data: Prompt) -> dict[str, str]:
         session_id=data.session_id,
         obfuscate_output=data.obfuscate_output,
     )
+    log_interaction(data.session_id, data.prompt, result)
     return {"response": result}
 
 

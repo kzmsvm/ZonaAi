@@ -42,3 +42,7 @@ On pushes to `main`, `.github/workflows/deploy.yml` deploys the service to Googl
 - `GCP_SA_KEY`
 
 Alternatively, use Cloud Build with `cloudbuild.yaml`.
+
+## Logging
+
+Zona logs each interaction to standard output. Each entry includes the session ID, the prompt, and the response handled by `log_interaction` in `app/utils/logger.py`.
