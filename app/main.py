@@ -9,16 +9,23 @@ app = FastAPI(title="Zona API")
 kernel = ZonaKernel()
 
 
+@app.get("/")
+async def root() -> dict[str, str]:
+    return {"message": kernel.obfuscate("Hello, Zona!")}
+
+
 class Prompt(BaseModel):
     prompt: str
     session_id: str = "default"
-    mode: str | None = None
+    obfuscate_output: bool = False
 
 
 @app.post("/prompt")
 async def prompt_handler(data: Prompt) -> dict[str, str]:
     result = kernel.openai_chat(
-        data.prompt, session_id=data.session_id, obfuscate=data.mode == "obfuscate"
+        data.prompt,
+        session_id=data.session_id,
+        obfuscate_output=data.obfuscate_output,
     )
     return {"response": result}
 
