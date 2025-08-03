@@ -5,6 +5,12 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.kernel.zona_kernel import ZonaKernel
+from app.kernel.providers.base_provider import BaseProvider
+
+
+class EchoProvider(BaseProvider):
+    def generate_response(self, messages):
+        return messages[-1]["content"]
 
 
 def test_plugin_confirmation_execute_and_isolation():
@@ -15,7 +21,7 @@ def test_plugin_confirmation_execute_and_isolation():
     assert response == "Run plugin `math` with args `2+2`? (yes/no)"
     assert kernel.pending_actions["s1"] == "!math 2+2"
 
-    other = kernel.openai_chat("hi", session_id="s2")
+    other = kernel.chat(EchoProvider(), "hi", session_id="s2")
     assert other == "hi"
     assert "s1" in kernel.pending_actions
 

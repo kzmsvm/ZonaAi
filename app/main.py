@@ -53,12 +53,15 @@ async def prompt_handler(request: Request, data: Prompt) -> dict[str, str]:
         LicenseManager.require_license(license_key)
 
     provider = provider_cls()  # API key vb. içerden alıyor
-    result = kernel.chat(
-        provider,
-        data.prompt,
-        session_id=data.session_id,
-        obfuscate_output=data.obfuscate_output,
-    )
+    try:
+        result = kernel.chat(
+            provider,
+            data.prompt,
+            session_id=data.session_id,
+            obfuscate_output=data.obfuscate_output,
+        )
+    except RuntimeError as exc:  # missing client/model
+        raise HTTPException(status_code=500, detail=str(exc))
     log_interaction(data.session_id, data.prompt, result)
     return {"response": result}
 

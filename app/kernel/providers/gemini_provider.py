@@ -12,17 +12,18 @@ from .base_provider import BaseProvider
 class GeminiProvider(BaseProvider):
     """Provider that uses Google's Gemini API."""
 
-    def __init__(self, api_key: str | None = None) -> None:
+    def __init__(self, api_key: str | None = None, model: str | None = None) -> None:
         self.api_key = api_key or os.getenv("GEMINI_API_KEY")
-        if self.api_key and genai is not None:
+        self.model_name = model or os.getenv("GEMINI_MODEL", "gemini-pro")
+        if self.api_key and genai is not None and self.model_name:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel("gemini-pro")
+            self.model = genai.GenerativeModel(self.model_name)
         else:
             self.model = None
 
     def generate_response(self, messages: List[Dict[str, str]]) -> str:
         if not self.model:
-            return messages[-1]["content"]
+            raise RuntimeError("Gemini model is not configured")
 
         history: List[Dict[str, str]] = []
         for m in messages[:-1]:

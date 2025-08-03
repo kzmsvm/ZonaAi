@@ -9,10 +9,10 @@ from app.main import app
 client = TestClient(app)
 
 
-def test_prompt_handler():
+def test_prompt_handler_missing_provider_config():
     res = client.post("/prompt", json={"prompt": "Hello Zona!", "provider": "openai"})
-    assert res.status_code == 200
-    assert "response" in res.json()
+    assert res.status_code == 500
+    assert "not configured" in res.json()["detail"]
 
 
 def test_root():
