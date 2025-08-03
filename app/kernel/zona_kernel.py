@@ -91,6 +91,10 @@ class ZonaKernel:
             raise ValueError(f"Unknown provider: {name}")
         return provider_func(prompt, session_id=session_id, obfuscate_output=obfuscate_output)
 
+    def add_provider(self, name: str, func: Callable[..., str]) -> None:
+        """Register a new provider at runtime."""
+        self.providers[name.lower()] = func
+
     def openai_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
         provider = OpenAIProvider()
         return self.chat(provider, prompt, session_id=session_id, obfuscate_output=obfuscate_output)
