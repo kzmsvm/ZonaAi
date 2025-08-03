@@ -27,6 +27,21 @@ uvicorn app.main:app --reload --port 8000
 
 Then visit `http://localhost:8000` in your browser to use the built‑in chat UI.
 
+## Providers
+
+The `/prompt` endpoint requires a `provider` field to select which LLM backend to use. Available providers are:
+
+- `openai` – set `OPENAI_API_KEY` to your API key; uses OpenAI's ChatCompletion API.
+
+Example request body:
+
+```json
+{
+  "prompt": "Hello",
+  "provider": "openai"
+}
+```
+
 ## Docker
 
 ```bash
