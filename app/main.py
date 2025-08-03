@@ -32,4 +32,4 @@ async def prompt_handler(data: Prompt) -> dict[str, str]:
     return {"response": result}
 
 
-app.mount("/", StaticFiles(directory="app/static", html=True), name="static")
+app.mount("/static", StaticFiles(directory="app/static", html=True), name="static")
