@@ -1,7 +1,9 @@
 import os
 from typing import Dict, List
+
 import openai
 
+from app.storage.memory_store import load_memory, save_memory
 
 class ZonaKernel:
     """OpenAI API wrapper with session memory."""
@@ -10,7 +12,7 @@ class ZonaKernel:
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if self.api_key:
             openai.api_key = self.api_key
-        self.memory: Dict[str, List[dict[str, str]]] = {}
+        self.memory: Dict[str, List[dict[str, str]]] = load_memory()
 
     def obfuscate(self, text: str) -> str:
         """Return a reversed version of the input text."""
@@ -37,5 +39,6 @@ class ZonaKernel:
             content = prompt
 
         history.append({"role": "assistant", "content": content})
+        save_memory(self.memory)
 
         return self.obfuscate(content) if obfuscate_output else content
