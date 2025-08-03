@@ -7,6 +7,7 @@ from app.storage.memory_store import (
     save_memory,
     clear_memory as clear_memory_store,
 )
+from app.utils.license import LicenseManager
 from zona.plugin_manager import handle_plugin_command
 
 class ZonaKernel:
@@ -23,6 +24,15 @@ class ZonaKernel:
         self.memory: Dict[str, List[dict[str, str]]] = load_memory()
         self.max_messages = max_messages
         self.max_total_length = max_total_length
+        self.pending_actions: Dict[str, str] = {}
+
+        # Registered chat providers. Mapped to method names so runtime patches
+        # (used in tests) are respected.
+        self.providers: Dict[str, str] = {
+            "openai": "openai_chat"
+        }
+        if LicenseManager.validate_license():
+            self.providers["gemini"] = "gemini_chat"
 
     def obfuscate(self, text: str) -> str:
         """Return a reversed version of the input text."""
@@ -37,6 +47,16 @@ class ZonaKernel:
     ) -> str:
         """Send a prompt to the configured provider with session memory."""
         stripped = prompt.strip()
+        if session_id in self.pending_actions:
+            confirmation = stripped.lower()
+            if confirmation in {"yes", "y"}:
+                command = self.pending_actions.pop(session_id)
+                return handle_plugin_command(command)
+            if confirmation in {"no", "n"}:
+                self.pending_actions.pop(session_id)
+                return "Cancelled."
+            return "Please reply 'yes' or 'no'."
+
         if stripped == "!clear":
             self.clear_memory(session_id)
             return "Memory cleared."
@@ -44,7 +64,10 @@ class ZonaKernel:
             self.clear_memory()
             return "All memory cleared."
         if stripped.startswith("!"):
-            return handle_plugin_command(stripped)
+            self.pending_actions[session_id] = stripped
+            name, *args = stripped[1:].split(maxsplit=1)
+            args_str = args[0] if args else ""
+            return f"Run plugin `{name}` with args `{args_str}`? (yes/no)"
 
         history = self.memory.setdefault(session_id, [])
         history.append({"role": "user", "content": prompt})
@@ -56,6 +79,23 @@ class ZonaKernel:
         self._trim_history(history)
         save_memory(self.memory)
 
+        return self.obfuscate(content) if obfuscate_output else content
+
+    def gemini_chat(
+        self,
+        prompt: str,
+        session_id: str = "default",
+        *,
+        obfuscate_output: bool = False,
+    ) -> str:
+        """Placeholder Gemini provider.
+
+        In a real implementation this would call the Google Gemini API. For the
+        purposes of testing and development, it simply echoes the prompt with a
+        provider-specific prefix.
+        """
+
+        content = f"Gemini: {prompt}"
         return self.obfuscate(content) if obfuscate_output else content
 
     # ------------------------------------------------------------------
