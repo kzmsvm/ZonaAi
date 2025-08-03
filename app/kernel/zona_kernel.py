@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Callable, Dict, List
 
 from app.kernel.providers import BaseProvider
 from app.kernel.providers.openai_provider import OpenAIProvider
@@ -23,11 +23,11 @@ class ZonaKernel:
         self.max_total_length = max_total_length
         self.pending_actions: Dict[str, str] = {}
 
-        self.providers: Dict[str, str] = {
-            "openai": "openai_chat"
+        self.providers: Dict[str, Callable[..., str]] = {
+            "openai": self.openai_chat,
         }
         if LicenseManager.validate_license():
-            self.providers["gemini"] = "gemini_chat"
+            self.providers["gemini"] = self.gemini_chat
 
     def obfuscate(self, text: str) -> str:
         return text[::-1]
@@ -75,6 +75,20 @@ class ZonaKernel:
         save_memory(self.memory)
 
         return self.obfuscate(content) if obfuscate_output else content
+
+    def dispatch_provider(
+        self,
+        name: str,
+        prompt: str,
+        session_id: str = "default",
+        *,
+        obfuscate_output: bool = False,
+    ) -> str:
+        """Dispatch chat request to a provider-specific method by name."""
+        provider_func = self.providers.get(name.lower())
+        if provider_func is None:
+            raise ValueError(f"Unknown provider: {name}")
+        return provider_func(prompt, session_id=session_id, obfuscate_output=obfuscate_output)
 
     def openai_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
         provider = OpenAIProvider()
