@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -35,21 +35,18 @@ PROVIDERS = {
     "gemini": GeminiProvider,
 }
 
-PREMIUM_PROVIDERS = {"gemini"}
-
 
 # POST /prompt — Chat endpoint'i
 @app.post("/prompt")
-async def prompt_handler(
-    data: Prompt,
-    license_key: str | None = Header(default=None, alias=LicenseManager.HEADER_NAME),
-) -> dict[str, str]:
+async def prompt_handler(request: Request, data: Prompt) -> dict[str, str]:
+    license_key = request.headers.get(LicenseManager.HEADER_NAME)
+
     provider_name = data.provider.lower()
     provider_cls = PROVIDERS.get(provider_name)
     if provider_cls is None:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {data.provider}")
 
-    if provider_name in PREMIUM_PROVIDERS:
+    if provider_name == "gemini":
         LicenseManager.require_license(license_key)
 
     provider = provider_cls()  # API key vb. içerden alıyor
