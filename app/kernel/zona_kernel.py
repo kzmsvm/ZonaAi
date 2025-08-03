@@ -1,9 +1,11 @@
 from typing import Dict, List
+
 from app.kernel.providers import BaseProvider
 from app.providers.openai_provider import OpenAIProvider
 from app.storage.memory_store import load_memory, save_memory, clear_memory as clear_memory_store
 from app.utils.license import LicenseManager
 from zona.plugin_manager import handle_plugin_command
+
 
 class ZonaKernel:
     """Chat kernel with pluggable providers and session memory."""
@@ -67,34 +69,18 @@ class ZonaKernel:
         self._trim_history(history)
 
         content = provider.generate_response(history)
+
         history.append({"role": "assistant", "content": content})
         self._trim_history(history)
         save_memory(self.memory)
 
         return self.obfuscate(content) if obfuscate_output else content
 
-    def openai_chat(
-        self,
-        prompt: str,
-        session_id: str = "default",
-        *,
-        obfuscate_output: bool = False,
-    ) -> str:
+    def openai_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
         provider = OpenAIProvider()
-        return self.chat(
-            provider,
-            prompt,
-            session_id=session_id,
-            obfuscate_output=obfuscate_output,
-        )
+        return self.chat(provider, prompt, session_id=session_id, obfuscate_output=obfuscate_output)
 
-    def gemini_chat(
-        self,
-        prompt: str,
-        session_id: str = "default",
-        *,
-        obfuscate_output: bool = False,
-    ) -> str:
+    def gemini_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
         content = f"Gemini: {prompt}"
         return self.obfuscate(content) if obfuscate_output else content
 
