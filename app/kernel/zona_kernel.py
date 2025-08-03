@@ -27,6 +27,7 @@ class ZonaKernel:
         self.memory: Dict[str, List[dict[str, str]]] = load_memory()
         self.max_messages = max_messages
         self.max_total_length = max_total_length
+        self.pending_actions: Dict[str, str] = {}
 
         # Registered chat providers. Mapped to method names so runtime patches
         # (used in tests) are respected.
@@ -49,6 +50,16 @@ class ZonaKernel:
     ) -> str:
         """Send a prompt to the OpenAI ChatCompletion API with session memory."""
         stripped = prompt.strip()
+        if session_id in self.pending_actions:
+            confirmation = stripped.lower()
+            if confirmation in {"yes", "y"}:
+                command = self.pending_actions.pop(session_id)
+                return handle_plugin_command(command)
+            if confirmation in {"no", "n"}:
+                self.pending_actions.pop(session_id)
+                return "Cancelled."
+            return "Please reply 'yes' or 'no'."
+
         if stripped == "!clear":
             self.clear_memory(session_id)
             return "Memory cleared."
@@ -56,7 +67,10 @@ class ZonaKernel:
             self.clear_memory()
             return "All memory cleared."
         if stripped.startswith("!"):
-            return handle_plugin_command(stripped)
+            self.pending_actions[session_id] = stripped
+            name, *args = stripped[1:].split(maxsplit=1)
+            args_str = args[0] if args else ""
+            return f"Run plugin `{name}` with args `{args_str}`? (yes/no)"
 
         history = self.memory.setdefault(session_id, [])
         history.append({"role": "user", "content": prompt})
