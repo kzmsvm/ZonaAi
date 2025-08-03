@@ -4,6 +4,7 @@ from typing import Dict, List
 import openai
 
 from app.storage.memory_store import load_memory, save_memory
+from zona.plugin_manager import handle_plugin_command
 
 class ZonaKernel:
     """OpenAI API wrapper with session memory."""
@@ -26,6 +27,9 @@ class ZonaKernel:
         obfuscate_output: bool = False,
     ) -> str:
         """Send a prompt to the OpenAI ChatCompletion API with session memory."""
+        if prompt.startswith("!"):
+            return handle_plugin_command(prompt)
+
         history = self.memory.setdefault(session_id, [])
         history.append({"role": "user", "content": prompt})
 
