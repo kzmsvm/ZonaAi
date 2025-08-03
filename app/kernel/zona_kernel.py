@@ -1,7 +1,7 @@
 from typing import Dict, List
 
 from app.kernel.providers import BaseProvider
-from app.providers.openai_provider import OpenAIProvider
+from app.kernel.providers.openai_provider import OpenAIProvider
 from app.storage.memory_store import load_memory, save_memory, clear_memory as clear_memory_store
 from app.utils.license import LicenseManager
 from zona.plugin_manager import handle_plugin_command
