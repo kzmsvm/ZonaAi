@@ -1,7 +1,6 @@
-import os
 from typing import Dict, List
 
-import openai
+from app.kernel.providers import BaseProvider, OpenAIProvider
 
 from app.storage.memory_store import (
     load_memory,
@@ -11,18 +10,16 @@ from app.storage.memory_store import (
 from zona.plugin_manager import handle_plugin_command
 
 class ZonaKernel:
-    """OpenAI API wrapper with session memory."""
+    """Chat kernel with pluggable providers and session memory."""
 
     def __init__(
         self,
-        api_key: str | None = None,
+        provider: BaseProvider | None = None,
         *,
         max_messages: int | None = 20,
         max_total_length: int | None = None,
     ) -> None:
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        if self.api_key:
-            openai.api_key = self.api_key
+        self.provider = provider or OpenAIProvider()
         self.memory: Dict[str, List[dict[str, str]]] = load_memory()
         self.max_messages = max_messages
         self.max_total_length = max_total_length
@@ -31,14 +28,14 @@ class ZonaKernel:
         """Return a reversed version of the input text."""
         return text[::-1]
 
-    def openai_chat(
+    def chat(
         self,
         prompt: str,
         session_id: str = "default",
         *,
         obfuscate_output: bool = False,
     ) -> str:
-        """Send a prompt to the OpenAI ChatCompletion API with session memory."""
+        """Send a prompt to the configured provider with session memory."""
         stripped = prompt.strip()
         if stripped == "!clear":
             self.clear_memory(session_id)
@@ -53,14 +50,7 @@ class ZonaKernel:
         history.append({"role": "user", "content": prompt})
         self._trim_history(history)
 
-        if self.api_key:
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=history,
-            )
-            content = response.choices[0].message["content"].strip()
-        else:
-            content = prompt
+        content = self.provider.generate_response(history)
 
         history.append({"role": "assistant", "content": content})
         self._trim_history(history)
