@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from app.kernel.zona_kernel import ZonaKernel
 from app.kernel.providers.openai_provider import OpenAIProvider
 from app.kernel.providers.gemini_provider import GeminiProvider
+from app.kernel.providers.vertexai_provider import VertexAIProvider
 from app.utils.logger import log_interaction
 from app.utils.license import LicenseManager
 from app.integration_engine import router as integration_router
@@ -18,9 +19,11 @@ app = FastAPI(title="Zona API")
 
 # Varsayılan provider ayarı
 DEFAULT_PROVIDER = os.getenv("DEFAULT_PROVIDER", "openai").lower()
-_default_cls = {"openai": OpenAIProvider, "gemini": GeminiProvider}.get(
-    DEFAULT_PROVIDER, OpenAIProvider
-)
+_default_cls = {
+    "openai": OpenAIProvider,
+    "gemini": GeminiProvider,
+    "vertexai": VertexAIProvider,
+}.get(DEFAULT_PROVIDER, OpenAIProvider)
 
 # Varsayılan provider ile kernel başlat
 kernel = ZonaKernel(provider=_default_cls())
@@ -44,6 +47,7 @@ class Prompt(BaseModel):
 PROVIDERS = {
     "openai": OpenAIProvider,
     "gemini": GeminiProvider,
+    "vertexai": VertexAIProvider,
 }
 
 
@@ -57,7 +61,7 @@ async def prompt_handler(request: Request, data: Prompt) -> dict[str, str]:
     if provider_cls is None:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {data.provider}")
 
-    if provider_name == "gemini":
+    if provider_name in {"gemini", "vertexai"}:
         LicenseManager.require_license(license_key)
 
     provider = provider_cls()  # API key vb. içerden alıyor
