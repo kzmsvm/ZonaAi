@@ -60,6 +60,14 @@ Example request body:
 
 Additional providers can be registered at runtime using `ZonaKernel.add_provider`.
 
+## Integrations
+
+Zona includes an experimental integration engine for connecting to external
+systems such as accounting or CRM platforms. Available connectors can be listed
+via `GET /integrations/available`. New integrations may be added with
+`POST /integrations/add`, while `GET /integrations/scan` performs a best-effort
+discovery of resources in the configured cloud project.
+
 ## Plugins
 
 Zona includes a lightweight plugin system. Plugins can expose a simple

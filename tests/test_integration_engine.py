@@ -23,6 +23,14 @@ class DummyResponse:
         return self._data
 
 
+def test_list_available_integrations():
+    res = client.get("/integrations/available")
+    assert res.status_code == 200
+    data = res.json()
+    assert "available_systems" in data
+    assert "logo" in data["available_systems"]
+
+
 def test_logo_authenticate(monkeypatch):
     import httpx
     import asyncio
