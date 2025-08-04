@@ -125,3 +125,13 @@ class ZonaKernel:
         else:
             self.memory.pop(session_id, None)
             self.store.save_memory(self.memory)
+
+    def close(self) -> None:
+        """Release resources held by the kernel."""
+        self.store.close()
+
+    def __del__(self):  # pragma: no cover - best effort cleanup
+        try:
+            self.close()
+        except Exception:
+            pass

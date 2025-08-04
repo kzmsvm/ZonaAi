@@ -81,3 +81,9 @@ async def prompt_handler(request: Request, data: Prompt) -> dict[str, str]:
 # Statik web UI mount'u
 app.mount("/static", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 app.include_router(integration_router)
+
+
+@app.on_event("shutdown")
+def _shutdown() -> None:
+    """Cleanup resources on application shutdown."""
+    kernel.close()
