@@ -6,6 +6,16 @@
 </head>
 <body>
   <h1>Zona AI</h1>
+  <label for="session_id">Session ID:</label>
+  <input type="text" id="session_id" placeholder="Session ID"><br>
+
+  <label for="provider">Provider:</label>
+  <select id="provider">
+    <option value="openai">OpenAI</option>
+    <option value="gemini">Gemini</option>
+    <option value="vertexai">Vertex AI</option>
+  </select><br>
+
   <textarea id="prompt" rows="4" cols="50" placeholder="Enter your prompt..."></textarea><br>
   <button onclick="sendPrompt()">Send</button>
   <pre id="response"></pre>
