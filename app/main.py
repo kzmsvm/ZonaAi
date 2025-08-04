@@ -10,6 +10,7 @@ from app.kernel.providers.openai_provider import OpenAIProvider
 from app.kernel.providers.gemini_provider import GeminiProvider
 from app.utils.logger import log_interaction
 from app.utils.license import LicenseManager
+from app.integration_engine import router as integration_router
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -75,3 +76,4 @@ async def prompt_handler(request: Request, data: Prompt) -> dict[str, str]:
 
 # Statik web UI mount'u
 app.mount("/static", StaticFiles(directory=STATIC_DIR, html=True), name="static")
+app.include_router(integration_router)
