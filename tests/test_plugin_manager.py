@@ -22,3 +22,8 @@ def test_handle_plugin_command_time():
 def test_handle_plugin_command_math():
     result = handle_plugin_command("!math 2+2")
     assert result == "\U0001F9EE Result: 4"
+
+
+def test_handle_plugin_command_echo_class_plugin():
+    result = handle_plugin_command("!echo hello")
+    assert result == "hello"

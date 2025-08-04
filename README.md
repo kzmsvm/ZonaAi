@@ -59,6 +59,12 @@ Example request body:
 
 Additional providers can be registered at runtime using `ZonaKernel.add_provider`.
 
+## Plugins
+
+Zona includes a lightweight plugin system. Plugins can expose a simple
+`run` function or subclass `PluginBase` for a more structured interface with
+metadata and contextual arguments. Example plugins live in `zona/plugins/`.
+
 ## Docker
 
 ```bash
