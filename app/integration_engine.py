@@ -40,6 +40,12 @@ class IntegrationRequest(BaseModel):
     base_url: str
 
 
+@router.get("/available")
+async def list_available_integrations() -> dict:
+    """Return a list of systems that can be integrated."""
+    return {"available_systems": sorted(CONNECTORS.keys())}
+
+
 @router.post("/add")
 async def add_integration(request: IntegrationRequest) -> dict:
     connector_cls = CONNECTORS.get(request.system.lower())
