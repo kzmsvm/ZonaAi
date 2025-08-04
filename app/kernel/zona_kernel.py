@@ -4,7 +4,6 @@ from app.kernel.providers import BaseProvider
 from app.kernel.providers.openai_provider import OpenAIProvider
 from app.kernel.providers.vertexai_provider import VertexAIProvider
 from app.storage.memory_store import MemoryStore
-from app.utils.license import LicenseManager
 from zona.plugin_manager import handle_plugin_command
 
 
@@ -27,10 +26,9 @@ class ZonaKernel:
 
         self.providers: Dict[str, Callable[..., str]] = {
             "openai": self.openai_chat,
+            "gemini": self.gemini_chat,
+            "vertexai": self.vertexai_chat,
         }
-        if LicenseManager.validate_license():
-            self.providers["gemini"] = self.gemini_chat
-            self.providers["vertexai"] = self.vertexai_chat
 
     def obfuscate(self, text: str) -> str:
         return text[::-1]

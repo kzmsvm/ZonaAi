@@ -1,9 +1,9 @@
 """Connector for basic Salesforce interactions.
 
 The implementation purposefully keeps to a small subset of the Salesforce API
-required for the unit tests in this kata.  It demonstrates how an external
+required for the unit tests in this kata. It demonstrates how an external
 system could be authenticated with client credentials and queried for lead
-data.  Network errors are surfaced as ``RuntimeError`` instances so that the
+data. Network errors are surfaced as ``RuntimeError`` instances so that the
 integration engine can present a clean error message to API consumers.
 """
 
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import List
 
-import requests
+import httpx
 
 from .base import BaseConnector
 
@@ -26,38 +26,38 @@ class SalesforceConnector(BaseConnector):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
 
-    def authenticate(self) -> str:
+    async def authenticate(self) -> str:
         """Return an OAuth access token from Salesforce."""
         try:
-            response = requests.post(
-                f"{self.base_url}/services/oauth2/token",
-                data={
-                    "grant_type": "client_credentials",
-                    "client_id": self.client_id,
-                    "client_secret": self.client_secret,
-                },
-                timeout=self.timeout,
-            )
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    f"{self.base_url}/services/oauth2/token",
+                    data={
+                        "grant_type": "client_credentials",
+                        "client_id": self.client_id,
+                        "client_secret": self.client_secret,
+                    },
+                )
             response.raise_for_status()
             return response.json()["access_token"]
-        except requests.exceptions.RequestException as exc:  # pragma: no cover - network
+        except httpx.HTTPError as exc:  # pragma: no cover - network
             raise RuntimeError(f"Authentication request failed: {exc}") from exc
 
-    def fetch_leads(self, start_date: str) -> List[dict]:
+    async def fetch_leads(self, start_date: str) -> List[dict]:
         """Fetch leads created after ``start_date`` (ISO formatted)."""
-        token = self.authenticate()
+        token = await self.authenticate()
         try:
-            response = requests.get(
-                f"{self.base_url}/services/data/v52.0/query",
-                headers={"Authorization": f"Bearer {token}"},
-                params={
-                    "q": f"SELECT Id,Name FROM Lead WHERE CreatedDate > {start_date}"
-                },
-                timeout=self.timeout,
-            )
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(
+                    f"{self.base_url}/services/data/v52.0/query",
+                    headers={"Authorization": f"Bearer {token}"},
+                    params={
+                        "q": f"SELECT Id,Name FROM Lead WHERE CreatedDate > {start_date}"
+                    },
+                )
             response.raise_for_status()
             return response.json().get("records", [])
-        except requests.exceptions.RequestException as exc:  # pragma: no cover - network
+        except httpx.HTTPError as exc:  # pragma: no cover - network
             raise RuntimeError(f"Lead fetch failed: {exc}") from exc
 
     def get_api_schema(self) -> dict:

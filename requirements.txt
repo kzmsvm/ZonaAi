@@ -8,3 +8,4 @@ portalocker
 google-cloud-firestore
 google-cloud-aiplatform
 requests
+httpx

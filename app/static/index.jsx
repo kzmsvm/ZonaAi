@@ -22,7 +22,7 @@ const App = () => {
   };
 
   const sendPrompt = async () => {
-    const res = await axios.post("/prompt", { prompt, provider: "codex" });
+    const res = await axios.post("/prompt", { prompt, provider: "openai" });
     setResponse(res.data.response);
   };
 

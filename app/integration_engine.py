@@ -16,6 +16,7 @@ from app.integrations.base import BaseConnector
 from app.integrations.logo import LogoConnector
 from app.integrations.salesforce import SalesforceConnector
 from app.kernel.providers.codex_provider import CodexProvider
+from zona.plugin_manager import reload_plugins
 
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -41,7 +42,7 @@ async def add_integration(request: IntegrationRequest) -> dict:
 
     connector = connector_cls(api_key=request.api_key, base_url=request.base_url)
     try:
-        token = connector.authenticate()
+        token = await connector.authenticate()
     except Exception as exc:  # pragma: no cover - network failures
         raise HTTPException(status_code=500, detail=str(exc))
 
@@ -70,6 +71,7 @@ async def add_integration(request: IntegrationRequest) -> dict:
             plugin_dir = Path(__file__).resolve().parent.parent / "zona" / "plugins"
             plugin_dir.mkdir(parents=True, exist_ok=True)
             (plugin_dir / f"{request.system}_plugin.py").write_text(plugin_code)
+            reload_plugins()
     except Exception:  # pragma: no cover - optional feature
         pass
 
