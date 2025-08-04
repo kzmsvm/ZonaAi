@@ -6,3 +6,4 @@ numexpr
 google-generativeai
 portalocker
 google-cloud-firestore
+google-cloud-aiplatform

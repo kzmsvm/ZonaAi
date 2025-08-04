@@ -2,6 +2,7 @@ from typing import Callable, Dict, List
 
 from app.kernel.providers import BaseProvider
 from app.kernel.providers.openai_provider import OpenAIProvider
+from app.kernel.providers.vertexai_provider import VertexAIProvider
 from app.storage.memory_store import MemoryStore
 from app.utils.license import LicenseManager
 from zona.plugin_manager import handle_plugin_command
@@ -29,6 +30,7 @@ class ZonaKernel:
         }
         if LicenseManager.validate_license():
             self.providers["gemini"] = self.gemini_chat
+            self.providers["vertexai"] = self.vertexai_chat
 
     def obfuscate(self, text: str) -> str:
         return text[::-1]
@@ -102,6 +104,10 @@ class ZonaKernel:
     def gemini_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
         content = f"Gemini: {prompt}"
         return self.obfuscate(content) if obfuscate_output else content
+
+    def vertexai_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
+        provider = VertexAIProvider()
+        return self.chat(provider, prompt, session_id=session_id, obfuscate_output=obfuscate_output)
 
     def _trim_history(self, history: List[dict[str, str]]) -> None:
         if self.max_messages is not None and len(history) > self.max_messages:
