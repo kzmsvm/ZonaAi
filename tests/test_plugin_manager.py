@@ -27,3 +27,16 @@ def test_handle_plugin_command_math():
 def test_handle_plugin_command_echo_class_plugin():
     result = handle_plugin_command("!echo hello")
     assert result == "hello"
+
+
+def test_handle_plugin_command_rejects_unlisted_plugin(monkeypatch):
+    monkeypatch.setenv("ZONA_ALLOWED_PLUGINS", "hello,math")
+    import importlib
+    import zona.plugin_manager as pm
+    importlib.reload(pm)
+
+    result = pm.handle_plugin_command("!time")
+    assert result == "\u274C Plugin `time` is not allowed."
+
+    monkeypatch.delenv("ZONA_ALLOWED_PLUGINS", raising=False)
+    importlib.reload(pm)
