@@ -6,12 +6,16 @@ user feedback.
 """
 
 from typing import Dict, Type
+from pathlib import Path
+import os
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from app.integrations.base import BaseConnector
 from app.integrations.logo import LogoConnector
+from app.integrations.salesforce import SalesforceConnector
+from app.kernel.providers.codex_provider import CodexProvider
 
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -19,6 +23,7 @@ router = APIRouter(prefix="/integrations", tags=["integrations"])
 # Registry of available connector classes
 CONNECTORS: Dict[str, Type[BaseConnector]] = {
     "logo": LogoConnector,
+    "salesforce": SalesforceConnector,
 }
 
 
@@ -55,6 +60,19 @@ async def add_integration(request: IntegrationRequest) -> dict:
     except Exception:
         pass
 
+    # Attempt to auto‑generate a plugin using Codex.  This step is best effort
+    # only; failures are silently ignored so that missing API keys do not
+    # prevent the integration from being added during tests.
+    try:
+        if os.getenv("OPENAI_API_KEY") and hasattr(connector, "get_api_schema"):
+            schema = connector.get_api_schema()  # type: ignore[call-arg]
+            plugin_code = generate_plugin_code(request.system, schema)
+            plugin_dir = Path(__file__).resolve().parent.parent / "zona" / "plugins"
+            plugin_dir.mkdir(parents=True, exist_ok=True)
+            (plugin_dir / f"{request.system}_plugin.py").write_text(plugin_code)
+    except Exception:  # pragma: no cover - optional feature
+        pass
+
     return {"message": f"{request.system} integration added", "token": token}
 
 
@@ -77,3 +95,21 @@ async def scan_systems() -> dict:
     except Exception:
         systems = []
     return {"detected_systems": systems}
+
+
+def generate_plugin_code(system: str, api_schema: dict) -> str:
+    """Generate plugin source code using the Codex provider.
+
+    The prompt contains a short description of the target system along with the
+    supplied API schema.  Any failures (for example missing API keys) are
+    propagated to the caller and handled there.  This function is intentionally
+    small so that unit tests can stub it if required.
+    """
+
+    provider = CodexProvider()
+    prompt = (
+        "Create a Zona plugin for {system} integration using the following API "
+        "schema:\n{schema}\nThe plugin should use the PluginBase class and "
+        "implement run and get_metadata methods."
+    ).format(system=system, schema=api_schema)
+    return provider.generate_response(prompt)
