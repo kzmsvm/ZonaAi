@@ -24,41 +24,68 @@ class DummyResponse:
 
 
 def test_logo_authenticate(monkeypatch):
-    import requests
+    import httpx
+    import asyncio
 
-    def fake_post(url, headers, timeout):
-        assert url == "https://example.com/auth"
-        assert headers["Authorization"] == "Bearer secret"
-        return DummyResponse({"access_token": "token"})
+    class DummyClient:
+        def __init__(self, *args, **kwargs):
+            pass
 
-    monkeypatch.setattr(requests, "post", fake_post)
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+        async def post(self, url, headers=None):
+            assert url == "https://example.com/auth"
+            assert headers["Authorization"] == "Bearer secret"
+            return DummyResponse({"access_token": "token"})
+
+    monkeypatch.setattr(httpx, "AsyncClient", DummyClient)
 
     connector = LogoConnector(api_key="secret", base_url="https://example.com")
-    token = connector.authenticate()
+    token = asyncio.run(connector.authenticate())
     assert token == "token"
 
 
 def test_logo_fetch_invoices(monkeypatch):
-    import requests
+    import httpx
+    import asyncio
 
-    def fake_post(url, headers, timeout):
-        return DummyResponse({"access_token": "token"})
+    async def fake_authenticate(self):
+        return "token"
 
-    def fake_get(url, headers, params, timeout):
-        assert params == {"start": "2024-01-01", "end": "2024-01-31"}
-        assert headers["Authorization"] == "Bearer token"
-        return DummyResponse({"invoices": [{"id": 1}]})
+    class DummyClient:
+        def __init__(self, *args, **kwargs):
+            pass
 
-    monkeypatch.setattr(requests, "post", fake_post)
-    monkeypatch.setattr(requests, "get", fake_get)
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            pass
+
+        async def get(self, url, headers=None, params=None):
+            assert params == {"start": "2024-01-01", "end": "2024-01-31"}
+            assert headers["Authorization"] == "Bearer token"
+            return DummyResponse({"invoices": [{"id": 1}]})
+
+    monkeypatch.setattr(LogoConnector, "authenticate", fake_authenticate)
+    monkeypatch.setattr(httpx, "AsyncClient", DummyClient)
 
     connector = LogoConnector(api_key="secret", base_url="https://example.com")
-    invoices = connector.fetch_invoices("2024-01-01", "2024-01-31")
+    invoices = asyncio.run(connector.fetch_invoices("2024-01-01", "2024-01-31"))
     assert invoices == [{"id": 1}]
 
 
 def test_add_integration(monkeypatch):
-    monkeypatch.setattr(LogoConnector, "authenticate", lambda self: "token")
+    import asyncio
+
+    async def fake_authenticate(self):
+        return "token"
+
+    monkeypatch.setattr(LogoConnector, "authenticate", fake_authenticate)
 
     res = client.post(
         "/integrations/add",

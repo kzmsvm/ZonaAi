@@ -55,6 +55,11 @@ class PluginManager:
         self.plugins: Dict[str, Any] = {}
         self.load_plugins()
 
+    def reload(self) -> None:
+        """Reload plugins from disk, clearing previous state."""
+        self.plugins.clear()
+        self.load_plugins()
+
     def load_plugins(self) -> None:
         """Import plugin modules from the plugin directory.
 
@@ -126,5 +131,10 @@ def handle_plugin_command(command: str, context: Optional[dict] = None) -> Optio
     return _DEFAULT_MANAGER.handle(command, context)
 
 
-__all__ = ["PluginManager", "handle_plugin_command"]
+def reload_plugins() -> None:
+    """Reload plugins for the default manager."""
+    _DEFAULT_MANAGER.reload()
+
+
+__all__ = ["PluginManager", "handle_plugin_command", "reload_plugins"]
 
