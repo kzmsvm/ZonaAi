@@ -148,6 +148,22 @@ class MemoryStore:
             except Exception:
                 pass
 
+    def close(self) -> None:
+        """Close any open database connection."""
+        if self._db_conn is not None:
+            try:
+                self._db_conn.close()
+            except Exception:
+                pass
+            finally:
+                self._db_conn = None
+
+    def __del__(self):  # pragma: no cover - best effort cleanup
+        try:
+            self.close()
+        except Exception:
+            pass
+
 
 __all__ = ["MemoryStore"]
 
