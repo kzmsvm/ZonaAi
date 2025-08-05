@@ -18,29 +18,43 @@ ZonaAi/
         └── deploy.yml          # GitHub Actions workflow for Cloud Run
 ```
 
-## Local Development
+## Setup
 
-Copy `.env.template` to `.env` and populate it with your keys and preferences:
+1. **Create an environment file**
 
-```bash
-cp .env.template .env
-```
+   Copy the provided template and fill in your API keys and preferences:
 
-Key variables include:
+   ```bash
+   cp .env.template .env
+   ```
 
-- `OPENAI_API_KEY`, `GEMINI_API_KEY` – provider API keys
-- `LICENSE_KEY` – enables premium providers such as Gemini and Vertex AI
-- `USE_FIRESTORE` / `FIRESTORE_PROJECT_ID` – store chat memory in Firestore
-- `DATABASE_URL` – use SQLite/Postgres for persistent memory storage
-- `DEFAULT_PROVIDER` – default provider for `/prompt` requests
+   Key variables include:
 
-Run the app locally with:
+   - `OPENAI_API_KEY`, `GEMINI_API_KEY` – provider API keys
+   - `LICENSE_KEY` – enables premium providers such as Gemini and Vertex AI
+   - `USE_FIRESTORE` / `FIRESTORE_PROJECT_ID` – store chat memory in Firestore
+   - `DATABASE_URL` – use SQLite/Postgres for persistent memory storage
+   - `DEFAULT_PROVIDER` – default provider for `/prompt` requests
 
-```bash
-uvicorn app.main:app --reload --port 8000
-```
+2. **Run locally**
 
-Then visit `http://localhost:8000` in your browser to use the built‑in chat UI.
+   Install dependencies and start the development server:
+
+   ```bash
+   pip install -r requirements.txt
+   uvicorn app.main:app --reload --port 8000
+   ```
+
+   Visit `http://localhost:8000` in your browser to use the built‑in chat UI.
+
+3. **Run with Docker**
+
+   Build and run the container, passing in your `.env` file:
+
+   ```bash
+   docker build -t zona-api .
+   docker run --env-file .env -p 8080:8080 zona-api
+   ```
 
 ## Providers
 
@@ -73,13 +87,6 @@ discovery of resources in the configured cloud project.
 Zona includes a lightweight plugin system. Plugins can expose a simple
 `run` function or subclass `PluginBase` for a more structured interface with
 metadata and contextual arguments. Example plugins live in `zona/plugins/`.
-
-## Docker
-
-```bash
-docker build -t zona-api .
-docker run -p 8080:8080 zona-api
-```
 
 ## Deployment
 

@@ -1,7 +1,7 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['build', '-t', 'gcr.io/$PROJECT_ID/zonaai:$SHORT_SHA', '.']
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/zona-api:$SHORT_SHA', '.']
 - name: 'gcr.io/cloud-builders/docker'
-  args: ['push', 'gcr.io/$PROJECT_ID/zonaai:$SHORT_SHA']
+  args: ['push', 'gcr.io/$PROJECT_ID/zona-api:$SHORT_SHA']
 - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  args: ['run', 'deploy', 'zonaai', '--image', 'gcr.io/$PROJECT_ID/zonaai:$SHORT_SHA', '--region', 'us-central1', '--platform', 'managed']
+  args: ['run', 'deploy', 'zona-api', '--image', 'gcr.io/$PROJECT_ID/zona-api:$SHORT_SHA', '--region', 'us-central1', '--platform', 'managed']
