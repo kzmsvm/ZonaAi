@@ -105,9 +105,18 @@ class ProactiveSystem:
         self.modules[module.name] = module
 
     def scan(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run all modules sequentially and return accumulated state."""
+        """Run all modules sequentially and return accumulated state.
+
+        Any exceptions raised by individual modules are captured under an
+        ``errors`` key without interrupting the execution of subsequent
+        modules.
+        """
+        errors = data.setdefault("errors", {})
         for module in self.modules.values():
-            data = module.run(data)
+            try:
+                data = module.run(data)
+            except Exception as exc:  # pragma: no cover - broad to avoid crashes
+                errors[module.name] = str(exc)
         return data
 
 
