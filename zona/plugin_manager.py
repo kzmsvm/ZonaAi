@@ -69,13 +69,31 @@ class PluginManager:
         """
 
         plugin_dir = Path(__file__).with_name("plugins")
+        plugin_dir_resolved = plugin_dir.resolve()
         for path in plugin_dir.glob("*.py"):
-            if path.name.startswith("__"):
+            try:
+                real_path = path.resolve(strict=True)
+            except FileNotFoundError:
                 continue
-            name = path.stem
+
+            # Ensure the resolved path stays within the plugin directory
+            try:
+                real_path.relative_to(plugin_dir_resolved)
+            except ValueError:
+                continue
+
+            # Reject symbolic links outright
+            if path.is_symlink():
+                continue
+
+            if real_path.name.startswith("__"):
+                continue
+            name = real_path.stem
             if name not in self.allowlist:
                 continue
-            spec = importlib.util.spec_from_file_location(f"zona.plugins.{name}", path)
+            spec = importlib.util.spec_from_file_location(
+                f"zona.plugins.{name}", real_path
+            )
             if not spec or not spec.loader:  # pragma: no cover - importlib internals
                 continue
             module = importlib.util.module_from_spec(spec)
