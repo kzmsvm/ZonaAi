@@ -40,3 +40,26 @@ def test_handle_plugin_command_rejects_unlisted_plugin(monkeypatch):
 
     monkeypatch.delenv("ZONA_ALLOWED_PLUGINS", raising=False)
     importlib.reload(pm)
+
+
+def test_symlinked_plugin_outside_dir_is_rejected(tmp_path, monkeypatch):
+    import importlib
+    import zona.plugin_manager as pm
+
+    plugins_dir = Path(pm.__file__).with_name("plugins")
+    external_plugin = tmp_path / "external.py"
+    external_plugin.write_text("def run(arg):\n    return 'outside'")
+    symlink_path = plugins_dir / "evil.py"
+    symlink_path.symlink_to(external_plugin)
+
+    monkeypatch.setenv("ZONA_ALLOWED_PLUGINS", "hello,math,evil")
+    importlib.reload(pm)
+
+    try:
+        result = pm.handle_plugin_command("!evil")
+        assert result == "\u274C Plugin `evil` not found."
+    finally:
+        if symlink_path.exists():
+            symlink_path.unlink()
+        monkeypatch.delenv("ZONA_ALLOWED_PLUGINS", raising=False)
+        importlib.reload(pm)
