@@ -1,5 +1,7 @@
 import sys
 from pathlib import Path
+import sys
+from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
@@ -10,6 +12,7 @@ from app.main import app
 
 
 client = TestClient(app)
+HEADERS = {"X-API-Key": "test-key"}
 
 
 class DummyResponse:
@@ -24,7 +27,7 @@ class DummyResponse:
 
 
 def test_list_available_integrations():
-    res = client.get("/integrations/available")
+    res = client.get("/integrations/available", headers=HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert "available_systems" in data
@@ -102,6 +105,7 @@ def test_add_integration(monkeypatch):
     res = client.post(
         "/integrations/add",
         json={"system": "logo", "api_key": "secret", "base_url": "https://example.com"},
+        headers=HEADERS,
     )
 
     assert res.status_code == 200
@@ -109,7 +113,7 @@ def test_add_integration(monkeypatch):
 
 
 def test_scan_systems():
-    res = client.get("/integrations/scan")
+    res = client.get("/integrations/scan", headers=HEADERS)
     assert res.status_code == 200
     data = res.json()
     assert "detected_systems" in data

@@ -10,13 +10,14 @@ import app.main as main
 from app.kernel.zona_kernel import ZonaKernel
 
 client = TestClient(main.app)
+HEADERS = {"X-API-Key": "test-key"}
 
 
 def test_premium_provider_without_license():
     os.environ.pop("LICENSE_KEY", None)
     original = main.kernel
     main.kernel = ZonaKernel()
-    res = client.post("/prompt", json={"prompt": "hi", "provider": "gemini"})
+    res = client.post("/prompt", json={"prompt": "hi", "provider": "gemini"}, headers=HEADERS)
     assert res.status_code == 403
     assert res.json()["detail"].startswith("A valid license key is required")
     main.kernel = original
@@ -29,7 +30,7 @@ def test_premium_provider_with_license():
     res = client.post(
         "/prompt",
         json={"prompt": "hi", "provider": "gemini"},
-        headers={"X-License-Key": "valid"},
+        headers={"X-License-Key": "valid", **HEADERS},
     )
     assert res.status_code == 500
     assert "not configured" in res.json()["detail"]
