@@ -13,7 +13,8 @@ import json
 import os
 import sqlite3
 import logging
-from typing import Dict, List, Optional
+import time
+from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 from app.utils.logger import sanitize, logging_enabled
@@ -41,13 +42,19 @@ class MemoryStore:
         collection: str = "zona",
         document: str = "memory",
         database_url: Optional[str] = None,
+        retention_seconds: Optional[int] = None,
     ) -> None:
         self.collection = collection
         self.document = document
-        self._memory: Dict[str, List[dict]] = {}
+        self._memory: Dict[str, Dict[str, Any]] = {}
 
         self._client = None
         self._db_conn = None
+
+        default_retention = 30 * 24 * 60 * 60
+        self.retention_seconds = retention_seconds or int(
+            os.getenv("MEMORY_RETENTION_SECONDS", default_retention)
+        )
 
         project = project_id or os.getenv("FIRESTORE_PROJECT_ID")
         use_firestore = os.getenv("USE_FIRESTORE", "false").lower() in {"1", "true", "yes"}
@@ -88,6 +95,33 @@ class MemoryStore:
         return self._client.collection(self.collection).document(self.document)
 
     # ------------------------------------------------------------------
+    # Helper methods for expiration
+    def _normalize(self, data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+        now = time.time()
+        normalized: Dict[str, Dict[str, Any]] = {}
+        for sid, value in data.items():
+            if isinstance(value, dict) and "history" in value and "updated" in value:
+                normalized[sid] = {
+                    "history": value.get("history", []),
+                    "updated": value.get("updated", now),
+                }
+            else:
+                normalized[sid] = {"history": value, "updated": now}
+        return normalized
+
+    def _purge_expired(self) -> None:
+        if not self.retention_seconds:
+            return
+        now = time.time()
+        expired = [
+            sid
+            for sid, data in self._memory.items()
+            if now - data.get("updated", now) > self.retention_seconds
+        ]
+        for sid in expired:
+            self._memory.pop(sid, None)
+
+    # ------------------------------------------------------------------
     # Public API
     def load_memory(self) -> Dict[str, List[dict]]:
         """Load memory from Firestore, a database, or return cached value."""
@@ -97,12 +131,14 @@ class MemoryStore:
                 snapshot = doc_ref.get()
                 if snapshot.exists:
                     data = snapshot.to_dict() or {}
-                    self._memory = data
+                    self._memory = self._normalize(data)
+                    self._purge_expired()
                     if logging_enabled():
                         logger.debug(
-                            "Loaded memory snapshot: %s", sanitize(json.dumps(data))
+                            "Loaded memory snapshot: %s",
+                            sanitize(json.dumps(self._memory)),
                         )
-                    return data
+                    return {sid: d["history"] for sid, d in self._memory.items()}
             except Exception:
                 pass
 
@@ -112,17 +148,19 @@ class MemoryStore:
                 cursor.execute("SELECT data FROM memory WHERE id=1")
                 row = cursor.fetchone()
                 if row and row[0]:
-                    self._memory = json.loads(row[0])
+                    self._memory = self._normalize(json.loads(row[0]))
             except Exception:
                 pass
-            result = dict(self._memory)
+            self._purge_expired()
+            result = {sid: d["history"] for sid, d in self._memory.items()}
             if logging_enabled():
                 logger.debug(
                     "Loaded memory snapshot: %s", sanitize(json.dumps(result))
                 )
             return result
 
-        result = dict(self._memory)
+        self._purge_expired()
+        result = {sid: d["history"] for sid, d in self._memory.items()}
         if logging_enabled():
             logger.debug(
                 "Loaded memory snapshot: %s", sanitize(json.dumps(result))
@@ -131,15 +169,20 @@ class MemoryStore:
 
     def save_memory(self, memory: Dict[str, List[dict]]) -> None:
         """Persist memory to Firestore/DB and update the cache."""
-        self._memory = memory
+        now = time.time()
+        self._memory = {
+            sid: {"history": hist, "updated": now} for sid, hist in memory.items()
+        }
+        self._purge_expired()
+        data_to_save = self._memory
         if logging_enabled():
             logger.debug(
-                "Saving memory snapshot: %s", sanitize(json.dumps(memory))
+                "Saving memory snapshot: %s", sanitize(json.dumps(data_to_save))
             )
         doc_ref = self._doc_ref()
         if doc_ref is not None:
             try:
-                doc_ref.set(memory)
+                doc_ref.set(data_to_save)
             except Exception:
                 pass
         elif self._db_conn is not None:
@@ -148,7 +191,7 @@ class MemoryStore:
                 cursor.execute(
                     "INSERT INTO memory(id, data) VALUES(1, ?)"
                     " ON CONFLICT(id) DO UPDATE SET data=excluded.data",
-                    (json.dumps(memory),),
+                    (json.dumps(data_to_save),),
                 )
                 self._db_conn.commit()
             except Exception:
