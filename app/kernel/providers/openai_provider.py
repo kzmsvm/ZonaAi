@@ -17,9 +17,15 @@ class OpenAIProvider(BaseProvider):
     def generate_response(self, messages: List[Dict[str, str]]) -> str:
         if not self.client or not self.model:
             raise RuntimeError("OpenAI client or model is not configured")
+        try:  # pragma: no cover - network call not executed in tests
+            response = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                timeout=30,
+            )
+        except Exception as exc:  # pragma: no cover - handle network/API errors
+            raise RuntimeError(
+                "Failed to communicate with OpenAI API. Please try again later."
+            ) from exc
 
-        response = self.client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-        )
         return response.choices[0].message.content.strip()
