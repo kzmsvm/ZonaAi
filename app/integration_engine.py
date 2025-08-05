@@ -18,6 +18,9 @@ from app.integrations.salesforce import SalesforceConnector
 from app.integrations.quickbooks import QuickBooksConnector
 from app.integrations.sap import SAPConnector
 from app.integrations.netsis import NetsisConnector
+from app.integrations.netsuite import NetSuiteConnector
+from app.integrations.hubspot import HubSpotConnector
+from app.integrations.xero import XeroConnector
 from app.kernel.providers.codellama import CodeLlamaProvider
 from zona.plugin_manager import reload_plugins
 
@@ -31,6 +34,9 @@ CONNECTORS: Dict[str, Type[BaseConnector]] = {
     "quickbooks": QuickBooksConnector,
     "sap": SAPConnector,
     "netsis": NetsisConnector,
+    "netsuite": NetSuiteConnector,
+    "hubspot": HubSpotConnector,
+    "xero": XeroConnector,
 }
 
 

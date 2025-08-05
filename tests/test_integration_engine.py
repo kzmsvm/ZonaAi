@@ -28,7 +28,11 @@ def test_list_available_integrations():
     assert res.status_code == 200
     data = res.json()
     assert "available_systems" in data
-    assert "logo" in data["available_systems"]
+    systems = data["available_systems"]
+    assert "logo" in systems
+    assert "netsuite" in systems
+    assert "hubspot" in systems
+    assert "xero" in systems
 
 
 def test_logo_authenticate(monkeypatch):
