@@ -4,7 +4,7 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -12,6 +12,7 @@ from app.kernel.zona_kernel import ZonaKernel
 from app.utils.logger import log_interaction
 from app.utils.license import LicenseManager
 from app.integration_engine import router as integration_router
+from app.utils.security import limiter, verify_api_key
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -51,7 +52,7 @@ class Prompt(BaseModel):
 
 
 # POST /prompt — Chat endpoint'i
-@app.post("/prompt")
+@app.post("/prompt", dependencies=[Depends(verify_api_key), Depends(limiter)])
 async def prompt_handler(request: Request, data: Prompt) -> dict[str, str]:
     license_key = request.headers.get(LicenseManager.HEADER_NAME)
 

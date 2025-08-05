@@ -8,13 +8,14 @@ from fastapi.testclient import TestClient
 from app.main import app, kernel
 
 client = TestClient(app)
+HEADERS = {"X-API-Key": "test-key"}
 
 
 def test_prompt_handler_returns_response():
     original_chat = kernel.chat
     kernel.chat = lambda provider, prompt, session_id="default", obfuscate_output=False: "mocked"
 
-    response = client.post("/prompt", json={"prompt": "hi", "provider": "openai"})
+    response = client.post("/prompt", json={"prompt": "hi", "provider": "openai"}, headers=HEADERS)
 
     assert response.status_code == 200
     assert response.json() == {"response": "mocked"}
@@ -29,7 +30,7 @@ def test_vertexai_prompt_handler_requires_license_and_returns_response():
     response = client.post(
         "/prompt",
         json={"prompt": "hi", "provider": "vertexai"},
-        headers={"X-License-Key": "valid"},
+        headers={"X-License-Key": "valid", **HEADERS},
     )
 
     assert response.status_code == 200

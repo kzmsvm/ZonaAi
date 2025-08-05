@@ -7,10 +7,11 @@ from fastapi.testclient import TestClient
 from app.main import app, kernel
 
 client = TestClient(app)
+HEADERS = {"X-API-Key": "test-key"}
 
 
 def test_prompt_handler_missing_provider_config():
-    res = client.post("/prompt", json={"prompt": "Hello Zona!", "provider": "openai"})
+    res = client.post("/prompt", json={"prompt": "Hello Zona!", "provider": "openai"}, headers=HEADERS)
     assert res.status_code == 500
     assert "not configured" in res.json()["detail"]
 

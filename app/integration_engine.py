@@ -9,7 +9,7 @@ from typing import Dict, Type
 from pathlib import Path
 import os
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 import base64
 
@@ -29,9 +29,14 @@ from app.integrations.hubspot import HubSpotConnector
 from app.integrations.xero import XeroConnector
 from app.kernel.providers.codellama import CodeLlamaProvider
 from zona.plugin_manager import reload_plugins
+from app.utils.security import limiter, verify_api_key
 
 
-router = APIRouter(prefix="/integrations", tags=["integrations"])
+router = APIRouter(
+    prefix="/integrations",
+    tags=["integrations"],
+    dependencies=[Depends(verify_api_key), Depends(limiter)],
+)
 
 # Registry of available connector classes
 CONNECTORS: Dict[str, Type[BaseConnector]] = {
@@ -88,13 +93,13 @@ async def list_available_integrations() -> dict:
 
 
 @router.post("/add")
-async def add_integration(request: IntegrationRequest) -> dict:
-    connector_cls = CONNECTORS.get(request.system.lower())
+async def add_integration(payload: IntegrationRequest) -> dict:
+    connector_cls = CONNECTORS.get(payload.system.lower())
     if connector_cls is None:
         raise HTTPException(status_code=400, detail="Unsupported system")
 
-    api_key = decrypt_value(request.api_key)
-    base_url = decrypt_value(request.base_url)
+    api_key = decrypt_value(payload.api_key)
+    base_url = decrypt_value(payload.base_url)
 
     connector = connector_cls(api_key=api_key, base_url=base_url)
     try:
@@ -107,7 +112,7 @@ async def add_integration(request: IntegrationRequest) -> dict:
         from google.cloud import firestore  # type: ignore
 
         db = firestore.Client()
-        db.collection("integrations").document(request.system).set(
+        db.collection("integrations").document(payload.system).set(
             {
                 "api_key": encrypt_value(api_key),
                 "base_url": encrypt_value(base_url),
@@ -123,15 +128,15 @@ async def add_integration(request: IntegrationRequest) -> dict:
     try:
         if os.getenv("CODELLAMA_MODEL") and hasattr(connector, "get_api_schema"):
             schema = connector.get_api_schema()  # type: ignore[call-arg]
-            plugin_code = generate_plugin_code(request.system, schema)
+            plugin_code = generate_plugin_code(payload.system, schema)
             plugin_dir = Path(__file__).resolve().parent.parent / "zona" / "plugins"
             plugin_dir.mkdir(parents=True, exist_ok=True)
-            (plugin_dir / f"{request.system}_plugin.py").write_text(plugin_code)
+            (plugin_dir / f"{payload.system}_plugin.py").write_text(plugin_code)
             reload_plugins()
     except Exception:  # pragma: no cover - optional feature
         pass
 
-    return {"message": f"{request.system} integration added", "token": token}
+    return {"message": f"{payload.system} integration added", "token": token}
 
 
 @router.get("/scan")
