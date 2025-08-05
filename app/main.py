@@ -4,21 +4,31 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request, Depends
+import logging
+
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from app.kernel.zona_kernel import ZonaKernel
-from app.utils.logger import log_interaction
-from app.utils.license import LicenseManager
 from app.integration_engine import router as integration_router
+from app.kernel.zona_kernel import ZonaKernel
+from app.utils.license import LicenseManager
+from app.utils.logger import log_interaction
 from app.utils.security import limiter, verify_api_key
+from zona.utils.config import ConfigError, load_config
 
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 # Kernel varsayılan olarak OpenAIProvider ile başlar
 kernel = ZonaKernel()
+
+# Load and validate configuration early so misconfiguration is surfaced
+try:
+    settings = load_config()
+except ConfigError as exc:
+    logging.error("Configuration error: %s", exc)
+    raise
 
 
 # Varsayılan provider ayarı
