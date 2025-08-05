@@ -3,6 +3,7 @@ from typing import Callable, Dict, List
 from app.kernel.providers import BaseProvider
 from app.kernel.providers.openai_provider import OpenAIProvider
 from app.kernel.providers.vertexai_provider import VertexAIProvider
+from app.kernel.providers.gemini_provider import GeminiProvider
 from app.storage.memory_store import MemoryStore
 from zona.plugin_manager import handle_plugin_command
 
@@ -100,8 +101,8 @@ class ZonaKernel:
         return self.chat(provider, prompt, session_id=session_id, obfuscate_output=obfuscate_output)
 
     def gemini_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
-        content = f"Gemini: {prompt}"
-        return self.obfuscate(content) if obfuscate_output else content
+        provider = GeminiProvider()
+        return self.chat(provider, prompt, session_id=session_id, obfuscate_output=obfuscate_output)
 
     def vertexai_chat(self, prompt: str, session_id: str = "default", *, obfuscate_output: bool = False) -> str:
         provider = VertexAIProvider()
