@@ -18,3 +18,12 @@ def test_sqlite_persistence(tmp_path, monkeypatch):
     assert loaded == data
     store.clear_memory()
     assert store.load_memory() == {}
+
+
+def test_expiration(monkeypatch):
+    store = MemoryStore(retention_seconds=0.1)
+    store.save_memory({"s1": [{"role": "user", "content": "hi"}]})
+    import time
+
+    time.sleep(0.2)
+    assert store.load_memory() == {}

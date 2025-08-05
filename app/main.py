@@ -74,6 +74,15 @@ async def prompt_handler(request: Request, data: Prompt) -> dict[str, str]:
     return {"response": result}
 
 
+@app.delete("/memory/{session_id}")
+async def delete_memory(session_id: str) -> dict[str, str]:
+    """Delete all stored messages for the given session."""
+    if session_id not in kernel.memory:
+        raise HTTPException(status_code=404, detail="Session not found")
+    kernel.clear_memory(session_id)
+    return {"status": "deleted"}
+
+
 # Statik web UI mount'u
 app.mount("/static", StaticFiles(directory=STATIC_DIR, html=True), name="static")
 app.include_router(integration_router)

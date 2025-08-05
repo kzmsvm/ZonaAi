@@ -11,10 +11,10 @@ We collect the following types of user information when you interact with the ap
 Depending on your configuration, collected data may be stored in **Firestore** or in a **SQL database** such as SQLite or Postgres (`USE_FIRESTORE` / `DATABASE_URL`). In addition, all interactions are written to application logs, which may contain the same information.
 
 ## Data Retention
-Stored data and logs are kept for no longer than **30 days** unless a longer period is required to comply with legal obligations. After this period the data is deleted or anonymized.
+Stored session data and logs are kept for no longer than **30 days** by default. The retention period can be changed via the `MEMORY_RETENTION_SECONDS` environment variable. Expired data is automatically purged from the system.
 
 ## Data Deletion
-You may request deletion of your data at any time. For self-hosted deployments, remove the records from your database and purge any logs. For hosted deployments, contact the maintainers to request removal of your data; we will respond within 30 days.
+You may request deletion of your data at any time. A running instance exposes `DELETE /memory/{session_id}` to remove a specific chat session immediately. For self-hosted deployments, you may also clear the database and logs directly. For hosted deployments, contact the maintainers to request removal of your data; we will respond within 30 days.
 
 ## GDPR Rights for EU Users
 If you are located in the European Union, the General Data Protection Regulation (GDPR) provides the following rights:
