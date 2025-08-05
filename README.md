@@ -88,6 +88,14 @@ Zona includes a lightweight plugin system. Plugins can expose a simple
 `run` function or subclass `PluginBase` for a more structured interface with
 metadata and contextual arguments. Example plugins live in `zona/plugins/`.
 
+## Proactive System
+
+`zona/proactive/system.py` contains a skeleton for a proactive integrated engine.
+It demonstrates how marketing, code analysis, research, learning and
+recommendation modules can collaborate through a central `ProactiveSystem`
+that performs proactive scans over shared data.
+
+
 ## Deployment
 
 On pushes to `main`, `.github/workflows/deploy.yml` deploys the service to Google Cloud Run. Ensure the following secrets are configured:
