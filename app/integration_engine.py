@@ -11,6 +11,12 @@ import os
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+import base64
+
+try:  # Optional dependency
+    from cryptography.fernet import Fernet  # type: ignore
+except Exception:  # pragma: no cover - used when library is missing
+    Fernet = None  # type: ignore
 
 from app.integrations.base import BaseConnector
 from app.integrations.logo import LogoConnector
@@ -40,6 +46,35 @@ CONNECTORS: Dict[str, Type[BaseConnector]] = {
 }
 
 
+_RAW_KEY = (os.getenv("ENCRYPTION_KEY") or "default_key").encode()
+if Fernet:
+    # When cryptography is available, use it for encryption
+    _CIPHER = Fernet(base64.urlsafe_b64encode(_RAW_KEY.ljust(32, b"0")[:32]))
+else:  # pragma: no cover - simple fallback
+    _CIPHER = None
+
+
+def _xor(data: bytes) -> bytes:
+    return bytes(b ^ _RAW_KEY[i % len(_RAW_KEY)] for i, b in enumerate(data))
+
+
+def encrypt_value(value: str) -> str:
+    """Encrypt a string before persisting."""
+    if _CIPHER:
+        return _CIPHER.encrypt(value.encode()).decode()
+    return base64.urlsafe_b64encode(_xor(value.encode())).decode()
+
+
+def decrypt_value(value: str) -> str:
+    """Decrypt a stored string if possible."""
+    try:
+        if _CIPHER:
+            return _CIPHER.decrypt(value.encode()).decode()
+        return _xor(base64.urlsafe_b64decode(value.encode())).decode()
+    except Exception:
+        return value
+
+
 class IntegrationRequest(BaseModel):
     system: str
     api_key: str
@@ -58,7 +93,10 @@ async def add_integration(request: IntegrationRequest) -> dict:
     if connector_cls is None:
         raise HTTPException(status_code=400, detail="Unsupported system")
 
-    connector = connector_cls(api_key=request.api_key, base_url=request.base_url)
+    api_key = decrypt_value(request.api_key)
+    base_url = decrypt_value(request.base_url)
+
+    connector = connector_cls(api_key=api_key, base_url=base_url)
     try:
         token = await connector.authenticate()
     except Exception as exc:  # pragma: no cover - network failures
@@ -71,8 +109,8 @@ async def add_integration(request: IntegrationRequest) -> dict:
         db = firestore.Client()
         db.collection("integrations").document(request.system).set(
             {
-                "api_key": request.api_key,
-                "base_url": request.base_url,
+                "api_key": encrypt_value(api_key),
+                "base_url": encrypt_value(base_url),
                 "status": "active",
             }
         )
