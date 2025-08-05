@@ -109,5 +109,20 @@ Alternatively, use Cloud Build with `cloudbuild.yaml`.
 
 Zona logs each interaction to standard output. Each entry includes the session ID, the prompt, and the response handled by `log_interaction` in `app/utils/logger.py`.
 
+## Security Testing
+
+Install development tools and run static analysis and dependency checks:
+
+```bash
+pip install -r requirements.txt -r dev-requirements.txt
+flake8 app zona tests
+bandit -r app zona
+pylint app zona
+pip-audit
+safety check -r requirements.txt
+```
+
+Additional security practices and optional tools are described in [SECURITY_TESTS.md](SECURITY_TESTS.md).
+
 ## Privacy
 Session data is retained for 30 days by default (configurable via `MEMORY_RETENTION_SECONDS`) and can be deleted using `DELETE /memory/{session_id}`. For comprehensive information on data handling and GDPR rights, see [PRIVACY.md](PRIVACY.md).
