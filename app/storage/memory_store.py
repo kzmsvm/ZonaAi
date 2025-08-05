@@ -12,8 +12,13 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import logging
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
+
+from app.utils.logger import sanitize, logging_enabled
+
+logger = logging.getLogger(__name__)
 
 try:  # pragma: no cover - optional dependency
     from google.cloud import firestore  # type: ignore
@@ -93,6 +98,10 @@ class MemoryStore:
                 if snapshot.exists:
                     data = snapshot.to_dict() or {}
                     self._memory = data
+                    if logging_enabled():
+                        logger.debug(
+                            "Loaded memory snapshot: %s", sanitize(json.dumps(data))
+                        )
                     return data
             except Exception:
                 pass
@@ -106,13 +115,27 @@ class MemoryStore:
                     self._memory = json.loads(row[0])
             except Exception:
                 pass
-            return dict(self._memory)
+            result = dict(self._memory)
+            if logging_enabled():
+                logger.debug(
+                    "Loaded memory snapshot: %s", sanitize(json.dumps(result))
+                )
+            return result
 
-        return dict(self._memory)
+        result = dict(self._memory)
+        if logging_enabled():
+            logger.debug(
+                "Loaded memory snapshot: %s", sanitize(json.dumps(result))
+            )
+        return result
 
     def save_memory(self, memory: Dict[str, List[dict]]) -> None:
         """Persist memory to Firestore/DB and update the cache."""
         self._memory = memory
+        if logging_enabled():
+            logger.debug(
+                "Saving memory snapshot: %s", sanitize(json.dumps(memory))
+            )
         doc_ref = self._doc_ref()
         if doc_ref is not None:
             try:
@@ -134,6 +157,8 @@ class MemoryStore:
     def clear_memory(self) -> None:
         """Remove all persisted memory."""
         self._memory = {}
+        if logging_enabled():
+            logger.debug("Clearing all memory")
         doc_ref = self._doc_ref()
         if doc_ref is not None:
             try:
