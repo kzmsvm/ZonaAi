@@ -126,3 +126,7 @@ Additional security practices and optional tools are described in [SECURITY_TEST
 
 ## Privacy
 Session data is retained for 30 days by default (configurable via `MEMORY_RETENTION_SECONDS`) and can be deleted using `DELETE /memory/{session_id}`. For comprehensive information on data handling and GDPR rights, see [PRIVACY.md](PRIVACY.md).
+
+## Security Testing
+
+For guidance on running static analysis and dependency vulnerability checks, see [SECURITY.md](SECURITY.md).
